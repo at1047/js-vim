@@ -5,24 +5,32 @@
 // };
 
 // document.querySelector('#app').innerHTML = ``
+//
+//
+import { TodoList } from './util.js';
+
 
 const app = document.getElementById('app');
-const columns = 70;
-const rows = 33;
+const modeDisplay = document.getElementById('mode');
+export const columns = 70;
+export const rows = 33;
 const fontSize = 16;
 var buffer
 var cursorBuffer
 var visualBuffer
-const tabSpaces = 4;
+export const tabSpaces = 2;
 var marked;
 var fontWidth
 var fontHeight
+const Todo = new TodoList(buffer)
 
 
 // mode switching!!!
 // 0: command mode
 // 1: insert mode
 var mode = 0;
+var exBuffer = new Array(columns).fill(' ')
+exBuffer[0] = ':'
 
 const emptyBufRow = new Array(columns).fill(' ')
 const emptyCursor = new Array(rows);
@@ -35,7 +43,7 @@ for (var i = 0; i < rows; i++) {
 // }
 
 const getTextWidth = () => {
-  
+
   const text = document.createElement("pre");
   document.body.appendChild(text);
 
@@ -102,9 +110,11 @@ const render = () => {
     t += "\n";
   }
   app.innerHTML = t;
+  modeDisplay.textContent = `${mode}`
   console.log(t)
   cursor = document.getElementById('cursor')
   console.log(cursor)
+  console.log(buffer.map(line => line.length))
 
   if (mode === 0) {
     cursor.classList.remove("blinking")
@@ -112,10 +122,30 @@ const render = () => {
   } else if (mode === 1) {
     cursor.classList.add("blinking")
   }
+//      else if (mode === 5) {
+//    t = t.substring(0, t.length - columns+2);
+//    for (let j = 0; j < columns; j++) {
+//      if (j === columns) {
+//        if (cursorBuffer[i][j]) {
+//          t += '<mark id="cursor"> </mark>';
+//        } else {
+//          t += ' '
+//        }
+//      } else if (cursorBuffer[i][j]) {
+//        t += '<mark id="cursor">';
+//        t += exBuffer[j];
+//        t += '</mark>';
+//      } else {
+//        t += exBuffer[j];
+//      }
+//
+//    }
+//  }
+
 
   // buffer.forEach((row) => {
   //   row.forEach((cell) => {
-  //     if 
+  //     if
   //     t += cell;
   //   });
   //   t += "\n";
@@ -144,10 +174,7 @@ const findCursor = () => {
 }
 
 const moveCursor = (dir, times) => {
-  console.log(dir)
-  console.log(findCursor())
   const {i, j} = findCursor()
-  console.log({i, j})
   var [newi, newj] = [i, j];
 
   for (let i = 0; i < times; i++) {
@@ -169,8 +196,9 @@ const moveCursor = (dir, times) => {
         newj = (newj + 1 < columns+1 ? newj + 1 : newj)
         break;
     }
+    console.log(`new pos: ${newi} ${newj}`)
   }
-  
+
   cursorBuffer[i][j] = false;
   cursorBuffer[newi][newj] = true;
 }
@@ -283,7 +311,7 @@ const rowEquals = (array1, array2) => {
 }
 
 const isAscii = (keycode) => {
-  var valid = 
+  var valid =
     // (keycode > 47 && keycode < 58)   || // number keys
     // keycode == 32 || keycode == 13   || // spacebar & return key(s) (if you want to allow carriage returns)
     // (keycode > 64 && keycode < 91)   || // letter keys
@@ -307,11 +335,12 @@ document.addEventListener('keypress', (event) => {
       commandFunctions(name)
       break;
     case 1:
-      console.log("inputting char")
+      console.log("in insert mode")
       if (isAscii(code)) {
         console.log("is ascii")
         inputChar(name)
       } else {
+        console.log("is not ascii")
         switch(name) {
           case "Escape":
             mode = 0
@@ -322,7 +351,6 @@ document.addEventListener('keypress', (event) => {
             break;
           case 'Enter':
             moveCursor('j', 1)
-
             goToRowStart()
             break;
         }
@@ -336,6 +364,19 @@ document.addEventListener('keypress', (event) => {
           mode = 0;
           break;
       }
+    case 5:
+      console.log('mode 5')
+      switch(name) {
+        case 'w':
+          Todo.update(buffer)
+          buffer = Todo.buffer
+          console.log(buffer)
+          mode = 0
+          break;
+        case 'Escape':
+          mode = 0
+          break;
+      }
   }
 
   render()
@@ -343,15 +384,29 @@ document.addEventListener('keypress', (event) => {
 
 document.onkeydown = function (t) {
   console.log(t)
+  console.log("ignoring")
   if(t.which == 9){
-   return false;
+    switch(mode) {
+      case 1:
+        console.log('tabbing')
+        for (let i=0; i<tabSpaces; i++) {
+          inputChar(' ')
+        }
+    }
+    render()
+    return false;
   }
- }
+}
 
 
 const commandFunctions = (name) => {
   console.log(name)
   switch(name) {
+    case ':':
+      console.log('ex mode')
+      mode = 5
+      console.log(mode)
+      break;
     case 'h':
       moveCursor('h', 1)
       break;
@@ -417,7 +472,6 @@ const commandFunctions = (name) => {
       break;
   }
 }
-
 
 const clear = () => {
   for (let i = 0; i < buffer.length; i++) {
